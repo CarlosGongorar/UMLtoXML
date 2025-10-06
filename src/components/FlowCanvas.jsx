@@ -1,20 +1,24 @@
 import { useState, useCallback } from 'react';
-import { ReactFlow, applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow, } from '@xyflow/react';
+import { ReactFlow, ReactFlowProvider, applyNodeChanges, applyEdgeChanges, addEdge, useReactFlow, Background, Controls } from '@xyflow/react';
 import ContextMenu from './ContextMenu.jsx';
 import NodeContextMenu from './NodeContextMenu.jsx';
 import CreateClassModal from './CreateClassModal.jsx';
+import RelationModal from './RelationalModal.jsx';
 import UMLClassNode from './nodes/UMLClassNode.jsx';
 
 const nodeTypes = { umlClass: UMLClassNode };
 let id = 3;
 const getId = () => `node_${id++}`;
 
-export default function FlowCanvas() {
+export default function FlowCanvasInner() {
     const [nodes, setNodes] = useState([]);
     const [edges, setEdges] = useState([]);
+
     const [menuPosition, setMenuPosition] = useState(null);
     const [nodeMenu, setNodeMenu] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showRelationModal, setShowRelationModal] = useState(false);
+    const [relationSource, setRelationSource] = useState(null);
     const [pendingPosition, setPendingPosition] = useState(null);
 
     const reactFlowInstance = useReactFlow();
@@ -28,18 +32,17 @@ export default function FlowCanvas() {
         []
     );
     const onConnect = useCallback(
-        (params) => setEdges((eds) => addEdge(params, eds)),
+        (params) =>
+        setEdges((eds) => addEdge({ ...params, type: 'smoothstep', style: { strokeWidth: 2, stroke: '#333' } },  eds)),
         []
     );
 
-    // Clic derecho en el canvas
     const handleContextMenu = useCallback((event) => {
         event.preventDefault();
         setMenuPosition({ x: event.clientX, y: event.clientY });
         setNodeMenu(null);
     }, []);
 
-    // Clic derecho sobre un nodo
     const handleNodeContextMenu = useCallback((event, node) => {
         event.preventDefault();
         event.stopPropagation();
@@ -47,7 +50,6 @@ export default function FlowCanvas() {
         setMenuPosition(null);
     }, []);
 
-    // Crear nuevo nodo
     const handleAddNodeClick = useCallback(() => {
         if (!menuPosition) return;
         const flowPos = reactFlowInstance.screenToFlowPosition({
@@ -59,50 +61,52 @@ export default function FlowCanvas() {
         setMenuPosition(null);
     }, [menuPosition, reactFlowInstance]);
 
-    const handleCreateNode = useCallback((data) => {
+    const handleCreateNode = useCallback(
+        (data) => {
         if (!pendingPosition) return;
         const newNode = {
-        id: getId(),
-        type: 'umlClass',
-        position: pendingPosition,
-        data,
+            id: getId(),
+            type: 'umlClass',
+            position: pendingPosition,
+            data,
         };
         setNodes((nds) => nds.concat(newNode));
         setShowCreateModal(false);
         setPendingPosition(null);
-    }, [pendingPosition]);
+        },
+        [pendingPosition]
+    );
 
-    // Eliminar nodo
     const handleDeleteNode = useCallback((nodeId) => {
         setNodes((nds) => nds.filter((n) => n.id !== nodeId));
         setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
         setNodeMenu(null);
     }, []);
 
-    // Simular añadir una relación
     const handleAddRelation = useCallback((nodeId) => {
-        // Por ejemplo: crear una nueva clase y conectarla
-        const sourceNode = nodes.find((n) => n.id === nodeId);
-        if (!sourceNode) return;
-
-        const newNode = {
-        id: getId(),
-        type: 'umlClass',
-        position: {
-            x: sourceNode.position.x + 200,
-            y: sourceNode.position.y,
-        },
-        data: {
-            className: 'NuevaRelacion',
-            attributes: [],
-            methods: [],
-        },
-        };
-        const newEdge = { id: `e_${nodeId}_${newNode.id}`, source: nodeId, target: newNode.id };
-        setNodes((nds) => nds.concat(newNode));
-        setEdges((eds) => eds.concat(newEdge));
+        setRelationSource(nodeId);
+        setShowRelationModal(true);
         setNodeMenu(null);
-    }, [nodes]);
+    }, []);
+
+    // ✅ Crear relación entre dos nodos y mostrar el edge
+    const handleCreateRelation = useCallback(
+        (targetId) => {
+        if (!relationSource || !targetId) return;
+
+        const newEdge = {
+            source: relationSource,
+            target: targetId,
+            type: 'smoothstep',
+            style: { strokeWidth: 2, stroke: '#333' }
+        };
+
+        setEdges((eds) => addEdge(newEdge, eds));
+        setShowRelationModal(false);
+        setRelationSource(null);
+        },
+        [relationSource]
+    );
 
     return (
         <div
@@ -116,18 +120,19 @@ export default function FlowCanvas() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeContextMenu={handleNodeContextMenu} // 👈 muy importante
+            onNodeContextMenu={handleNodeContextMenu}
             fitView
-        />
+        >
+            <Background />
+            <Controls />
+        </ReactFlow>
 
-        {/* Menú general */}
         <ContextMenu
             position={menuPosition}
             onAddNode={handleAddNodeClick}
             onClose={() => setMenuPosition(null)}
         />
 
-        {/* Menú del nodo */}
         <NodeContextMenu
             position={nodeMenu}
             onDelete={handleDeleteNode}
@@ -139,6 +144,15 @@ export default function FlowCanvas() {
             <CreateClassModal
             onCancel={() => setShowCreateModal(false)}
             onCreate={handleCreateNode}
+            />
+        )}
+
+        {showRelationModal && (
+            <RelationModal
+            nodes={nodes}
+            sourceId={relationSource}
+            onSelect={handleCreateRelation}
+            onCancel={() => setShowRelationModal(false)}
             />
         )}
         </div>
