@@ -125,29 +125,44 @@ export default function FlowCanvasInner() {
     };
 
     const handleCreateRelation = useCallback(
-        (targetId) => {
-            if (!relationSource || !targetId) return;
+    (targetId, relationType) => {
+        if (!relationSource || !targetId) return;
 
-            const sourceNode = nodes.find((n) => n.id === relationSource);
-            const multiplicity = sourceNode?.data?.multiplicity || '';
+        const isInheritance = relationType === 'inheritance';
 
-            const newEdge = {
-                id: `edge_${relationSource}_${targetId}`,
-                source: relationSource,
-                target: targetId,
-                type: 'umlRelation',
-                style: { strokeWidth: 2, stroke: '#333' },
-                data: {
-                    sourceMultiplicity: '',
-                    targetMultiplicity: '',
-                },
-            };
-            setEdges((eds) => addEdge(newEdge, eds));
-            setShowRelationModal(false);
-            setRelationSource(null);
-        },
-        [relationSource, nodes]
-    );
+        const newEdge = {
+            id: `edge_${relationSource}_${targetId}`,
+            source: relationSource,
+            target: targetId,
+            type: 'umlRelation',
+            data: {
+                sourceMultiplicity: '',
+                targetMultiplicity: '',
+                relationType, // Guardamos el tipo en los datos
+            },
+            style: {
+                strokeWidth: 2,
+                stroke: '#333',
+            },
+            // Si es herencia, añadimos marcador triangular vacío
+            markerEnd: isInheritance
+                ? {
+                    type: 'arrowclosed',
+                    color: 'white',
+                    width: 20,
+                    height: 20,
+                    strokeWidth: 2,
+                  }
+                : {
+                  },
+        };
+
+        setEdges((eds) => addEdge(newEdge, eds));
+        setShowRelationModal(false);
+        setRelationSource(null);
+    },
+    [relationSource]
+);
 
     return (
         <div

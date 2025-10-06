@@ -76,12 +76,12 @@ export default function UMLClassNode({ data }) {
         <Handle
             type="target"
             position={Position.Top}
-            style={{ background: '#555' }}
+            style={{ background: '#f5f5f5', borderColor: '#f5f5f5' }}
         />
         <Handle
             type="source"
             position={Position.Bottom}
-            style={{ background: '#555' }}
+            style={{ background: '#fff' }}
         />
         </div>
     );

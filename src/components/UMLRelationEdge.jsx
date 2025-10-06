@@ -1,4 +1,3 @@
-// components/edges/UMLRelationEdge.jsx
 import React from 'react';
 import { getBezierPath } from '@xyflow/react';
 
@@ -12,9 +11,8 @@ export default function UMLRelationEdge({
     targetPosition,
     data,
     style = {},
-    markerEnd,
-    }) {
-    const [edgePath, labelX, labelY] = getBezierPath({
+}) {
+    const [edgePath] = getBezierPath({
         sourceX,
         sourceY,
         sourcePosition,
@@ -23,46 +21,68 @@ export default function UMLRelationEdge({
         targetPosition,
     });
 
-    // Coordenadas para colocar los textos
-    const midX = (sourceX + targetX) / 2;
-    const midY = (sourceY + targetY) / 2;
+    // Definir el ID del marcador según el tipo
+    const markerId =
+        data?.relationType === 'inheritance'
+            ? `marker-inheritance-${id}`
+            : `marker-association-${id}`;
 
     return (
         <>
-        <path
-            id={id}
-            d={edgePath}
-            stroke={style.stroke || '#333'}
-            strokeWidth={style.strokeWidth || 2}
-            fill="none"
-            markerEnd={markerEnd}
-        />
-        
-        {/* Multiplicidad del source */}
-        {data?.sourceMultiplicity && (
-            <text
-            x={sourceX + (targetX - sourceX) * 0.2}
-            y={sourceY + (targetY - sourceY) * 0.2 - 5}
-            fill="#000"
-            fontSize="12"
-            textAnchor="middle"
-            >
-            {data.sourceMultiplicity}
-            </text>
-        )}
+            {/* === Definición de marcadores personalizados === */}
+            <defs>
+                {/* Triángulo vacío para herencia */}
+                <marker
+                    id={`marker-inheritance-${id}`}
+                    markerWidth="12"
+                    markerHeight="12"
+                    refX="12"
+                    refY="6"
+                    orient="auto"
+                    markerUnits="strokeWidth"
+                >
+                    <path
+                        d="M0,0 L12,6 L0,12 Z"
+                        fill="white"
+                        stroke="#333"
+                        strokeWidth="1"
+                    />
+                </marker>
+            </defs>
 
-        {/* Multiplicidad del target */}
-        {data?.targetMultiplicity && (
-            <text
-            x={targetX - (targetX - sourceX) * 0.2}
-            y={targetY - (targetY - sourceY) * 0.2 - 5}
-            fill="#000"
-            fontSize="12"
-            textAnchor="middle"
-            >
-            {data.targetMultiplicity}
-            </text>
-        )}
+            {/* === Línea de conexión === */}
+            <path
+                id={id}
+                d={edgePath}
+                stroke={style.stroke || '#333'}
+                strokeWidth={style.strokeWidth || 2}
+                fill="none"
+                markerEnd={`url(#${markerId})`}
+            />
+
+            {/* === Multiplicidades === */}
+            {data?.sourceMultiplicity && (
+                <text
+                    x={sourceX + (targetX - sourceX) * 0.2}
+                    y={sourceY + (targetY - sourceY) * 0.2 - 5}
+                    fill="#000"
+                    fontSize="12"
+                    textAnchor="middle"
+                >
+                    {data.sourceMultiplicity}
+                </text>
+            )}
+            {data?.targetMultiplicity && (
+                <text
+                    x={targetX - (targetX - sourceX) * 0.2}
+                    y={targetY - (targetY - sourceY) * 0.2 - 5}
+                    fill="#000"
+                    fontSize="12"
+                    textAnchor="middle"
+                >
+                    {data.targetMultiplicity}
+                </text>
+            )}
         </>
     );
 }
