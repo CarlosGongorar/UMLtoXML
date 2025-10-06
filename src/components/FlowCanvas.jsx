@@ -4,13 +4,13 @@ import ContextMenu from './ContextMenu.jsx';
 import NodeContextMenu from './NodeContextMenu.jsx';
 import CreateClassModal from './CreateClassModal.jsx';
 import RelationModal from './RelationalModal.jsx';
-import MultiplicityModal from './MultiplicityModal.jsx'
+import MultiplicityModal from './MultiplicityModal.jsx';
 import UMLClassNode from './nodes/UMLClassNode.jsx';
-import UMLRelationNode from './UMLRelationEdge.jsx'
+import UMLRelationNode from './UMLRelationEdge.jsx';
 
 const nodeTypes = { umlClass: UMLClassNode };
 const edgeTypes = { umlRelation: UMLRelationNode };
-let id = 3;
+let id = 0;
 const getId = () => `node_${id++}`;
 
 export default function FlowCanvasInner() {
@@ -39,7 +39,12 @@ export default function FlowCanvasInner() {
     );
     const onConnect = useCallback(
         (params) =>
-        setEdges((eds) => addEdge({ ...params, type: 'umlRelation', style: { strokeWidth: 2, stroke: '#333' } },  eds)),
+        setEdges((eds) =>
+            addEdge(
+            { ...params, type: 'umlRelation', style: { strokeWidth: 2, stroke: '#333' } },
+            eds
+            )
+        ),
         []
     );
 
@@ -96,13 +101,10 @@ export default function FlowCanvasInner() {
     }, []);
 
     const handleAddMultiplicity = (nodeId) => {
-        // Buscar un edge conectado a este nodo
         const edge = edges.find(
-            (e) => e.source === nodeId || e.target === nodeId
+        (e) => e.source === nodeId || e.target === nodeId
         );
         if (!edge) return alert('⚠️ Este nodo no tiene relaciones.');
-
-        // Determinar si el nodo es el source o target del edge
         const end = edge.source === nodeId ? 'source' : 'target';
         setSelectedEdgeId(edge.id);
         setSelectedEdgeEnd(end);
@@ -111,16 +113,14 @@ export default function FlowCanvasInner() {
 
     const handleConfirmMultiplicity = (value) => {
         setEdges((eds) =>
-            eds.map((edge) => {
+        eds.map((edge) => {
             if (edge.id !== selectedEdgeId) return edge;
-
             const newData =
-                selectedEdgeEnd === 'source'
+            selectedEdgeEnd === 'source'
                 ? { ...edge.data, sourceMultiplicity: value }
                 : { ...edge.data, targetMultiplicity: value };
-
             return { ...edge, data: newData };
-            })
+        })
         );
     };
 
@@ -149,12 +149,11 @@ export default function FlowCanvasInner() {
                 ? {
                     type: 'arrowclosed',
                     color: 'white',
-                    width: 20,
-                    height: 20,
-                    strokeWidth: 2,
-                  }
-                : {
-                  },
+                    width: 12,
+                    height: 12,
+                    strokeWidth: 1,
+                }
+                : {},
         };
 
         setEdges((eds) => addEdge(newEdge, eds));
@@ -163,6 +162,22 @@ export default function FlowCanvasInner() {
     },
     [relationSource]
 );
+
+    // 🔹 Función para exportar el diagrama
+    const handleExportUML = () => {
+        const exportData = { nodes, edges };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'uml-diagram.json';
+        a.click();
+
+        URL.revokeObjectURL(url);
+    };
 
     return (
         <div
@@ -204,14 +219,12 @@ export default function FlowCanvasInner() {
             onCreate={handleCreateNode}
             />
         )}
-
         {showMultiplicityModal && (
             <MultiplicityModal
-                onConfirm={handleConfirmMultiplicity}
-                onClose={() => setShowMultiplicityModal(false)}
+            onConfirm={handleConfirmMultiplicity}
+            onClose={() => setShowMultiplicityModal(false)}
             />
         )}
-
         {showRelationModal && (
             <RelationModal
             nodes={nodes}
@@ -220,6 +233,25 @@ export default function FlowCanvasInner() {
             onCancel={() => setShowRelationModal(false)}
             />
         )}
+
+        {/* 🔘 Botón de Exportar UML */}
+        <button
+            onClick={handleExportUML}
+            style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '20px',
+            padding: '10px 16px',
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+            }}
+        >
+            💾 Exportar UML
+        </button>
         </div>
     );
 }
