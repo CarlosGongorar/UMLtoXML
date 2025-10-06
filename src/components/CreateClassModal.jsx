@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 
 export default function CreateClassModal({ onCancel, onCreate }) {
     const [className, setClassName] = useState('NuevaClase');
-    const [attributes, setAttributes] = useState(['+ atributo1: Tipo']);
-    const [methods, setMethods] = useState(['+ metodo1(): void']);
+    const [attributes, setAttributes] = useState(['']);
+    const [methods, setMethods] = useState(['']);
 
     const handleAddAttribute = () => setAttributes([...attributes, '']);
     const handleAddMethod = () => setMethods([...methods, '']);
