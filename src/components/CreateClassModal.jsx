@@ -62,7 +62,7 @@ export default function CreateClassModal({ onCancel, onCreate }) {
         <button onClick={handleAddAttribute} style={{ marginBottom: 10 }}>
             + Añadir atributo
         </button>
-
+        <br />
         <label>Métodos:</label>
         {methods.map((m, i) => (
             <input
