@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-export default function NodeContextMenu({ position, onDelete, onAddRelation, onClose }) {
+export default function NodeContextMenu({ position, onDelete, onAddRelation, onAddMultiplicity, onClose }) {
     useEffect(() => {
         const handleClickOutside = () => onClose();
         window.addEventListener('click', handleClickOutside);
@@ -38,6 +38,18 @@ export default function NodeContextMenu({ position, onDelete, onAddRelation, onC
             }}
         >
             🔗 Añadir relación
+        </div>
+        <div
+            onClick={() => onAddMultiplicity(position.nodeId)}
+            style={{
+            padding: '6px 4px',
+            borderRadius: 6,
+            background: '#f5f5f5',
+            marginBottom: 4,
+            cursor: 'pointer',
+            }}
+        >
+            🔢 Añadir multiplicidad
         </div>
         <div
             onClick={() => onDelete(position.nodeId)}

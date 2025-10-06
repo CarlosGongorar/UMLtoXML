@@ -4,9 +4,12 @@ import ContextMenu from './ContextMenu.jsx';
 import NodeContextMenu from './NodeContextMenu.jsx';
 import CreateClassModal from './CreateClassModal.jsx';
 import RelationModal from './RelationalModal.jsx';
+import MultiplicityModal from './MultiplicityModal.jsx'
 import UMLClassNode from './nodes/UMLClassNode.jsx';
+import UMLRelationNode from './UMLRelationEdge.jsx'
 
 const nodeTypes = { umlClass: UMLClassNode };
+const edgeTypes = { umlRelation: UMLRelationNode };
 let id = 3;
 const getId = () => `node_${id++}`;
 
@@ -20,6 +23,9 @@ export default function FlowCanvasInner() {
     const [showRelationModal, setShowRelationModal] = useState(false);
     const [relationSource, setRelationSource] = useState(null);
     const [pendingPosition, setPendingPosition] = useState(null);
+    const [showMultiplicityModal, setShowMultiplicityModal] = useState(false);
+    const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+    const [selectedEdgeEnd, setSelectedEdgeEnd] = useState(null);
 
     const reactFlowInstance = useReactFlow();
 
@@ -33,7 +39,7 @@ export default function FlowCanvasInner() {
     );
     const onConnect = useCallback(
         (params) =>
-        setEdges((eds) => addEdge({ ...params, type: 'smoothstep', style: { strokeWidth: 2, stroke: '#333' } },  eds)),
+        setEdges((eds) => addEdge({ ...params, type: 'umlRelation', style: { strokeWidth: 2, stroke: '#333' } },  eds)),
         []
     );
 
@@ -89,23 +95,58 @@ export default function FlowCanvasInner() {
         setNodeMenu(null);
     }, []);
 
-    // ✅ Crear relación entre dos nodos y mostrar el edge
+    const handleAddMultiplicity = (nodeId) => {
+        // Buscar un edge conectado a este nodo
+        const edge = edges.find(
+            (e) => e.source === nodeId || e.target === nodeId
+        );
+        if (!edge) return alert('⚠️ Este nodo no tiene relaciones.');
+
+        // Determinar si el nodo es el source o target del edge
+        const end = edge.source === nodeId ? 'source' : 'target';
+        setSelectedEdgeId(edge.id);
+        setSelectedEdgeEnd(end);
+        setShowMultiplicityModal(true);
+    };
+
+    const handleConfirmMultiplicity = (value) => {
+        setEdges((eds) =>
+            eds.map((edge) => {
+            if (edge.id !== selectedEdgeId) return edge;
+
+            const newData =
+                selectedEdgeEnd === 'source'
+                ? { ...edge.data, sourceMultiplicity: value }
+                : { ...edge.data, targetMultiplicity: value };
+
+            return { ...edge, data: newData };
+            })
+        );
+    };
+
     const handleCreateRelation = useCallback(
         (targetId) => {
-        if (!relationSource || !targetId) return;
+            if (!relationSource || !targetId) return;
 
-        const newEdge = {
-            source: relationSource,
-            target: targetId,
-            type: 'smoothstep',
-            style: { strokeWidth: 2, stroke: '#333' }
-        };
+            const sourceNode = nodes.find((n) => n.id === relationSource);
+            const multiplicity = sourceNode?.data?.multiplicity || '';
 
-        setEdges((eds) => addEdge(newEdge, eds));
-        setShowRelationModal(false);
-        setRelationSource(null);
+            const newEdge = {
+                id: `edge_${relationSource}_${targetId}`,
+                source: relationSource,
+                target: targetId,
+                type: 'umlRelation',
+                style: { strokeWidth: 2, stroke: '#333' },
+                data: {
+                    sourceMultiplicity: '',
+                    targetMultiplicity: '',
+                },
+            };
+            setEdges((eds) => addEdge(newEdge, eds));
+            setShowRelationModal(false);
+            setRelationSource(null);
         },
-        [relationSource]
+        [relationSource, nodes]
     );
 
     return (
@@ -117,6 +158,7 @@ export default function FlowCanvasInner() {
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -137,6 +179,7 @@ export default function FlowCanvasInner() {
             position={nodeMenu}
             onDelete={handleDeleteNode}
             onAddRelation={handleAddRelation}
+            onAddMultiplicity={handleAddMultiplicity}
             onClose={() => setNodeMenu(null)}
         />
 
@@ -144,6 +187,13 @@ export default function FlowCanvasInner() {
             <CreateClassModal
             onCancel={() => setShowCreateModal(false)}
             onCreate={handleCreateNode}
+            />
+        )}
+
+        {showMultiplicityModal && (
+            <MultiplicityModal
+                onConfirm={handleConfirmMultiplicity}
+                onClose={() => setShowMultiplicityModal(false)}
             />
         )}
 
