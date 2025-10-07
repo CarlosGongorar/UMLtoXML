@@ -163,21 +163,72 @@ export default function FlowCanvasInner() {
     [relationSource]
 );
 
-    // 🔹 Función para exportar el diagrama
-    const handleExportUML = () => {
-        const exportData = { nodes, edges };
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-        type: 'application/json',
+// 🔹 Exporta UML a XML (DTD) 
+const handleExportUML = () => {
+    const exportData = { nodes, edges };
+    const nodesList = exportData.nodes || [];
+    const edgesList = exportData.edges || [];
+
+    // Clases UML
+    const classNodes = nodesList.filter(
+        (n) => n.type === "umlClass" || (n.data && n.data.className)
+    );
+
+    // Relaciones entre clases
+    const relationsMap = new Map();
+
+    edgesList.forEach((edge) => {
+        const sourceNode = nodesList.find((n) => n.id === edge.source);
+        const targetNode = nodesList.find((n) => n.id === edge.target);
+        if (!sourceNode || !targetNode) return;
+
+        const sourceName = sourceNode.data?.className || edge.source;
+        const targetName = targetNode.data?.className || edge.target;
+        const targetMult = (edge.data?.targetMultiplicity || "").trim();
+
+        let multiplicitySymbol = "";
+        if (targetMult.includes("0..1")) multiplicitySymbol = "?";
+        else if (targetMult.includes("1..*")) multiplicitySymbol = "+";
+        else if (targetMult.includes("0..*")) multiplicitySymbol = "*";
+        else multiplicitySymbol = ""; // 1..1 u otro caso
+
+        if (!relationsMap.has(sourceName)) relationsMap.set(sourceName, []);
+        relationsMap.get(sourceName).push(`${targetName}${multiplicitySymbol}`);
+    });
+
+    // --- Construcción del XML ---
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+
+    classNodes.forEach((node) => {
+        const className = node.data?.className || node.id;
+        const attrs = node.data?.attributes || [];
+        const attrNames = attrs.map((a) => a.split(":")[0].trim());
+        const rels = relationsMap.get(className) || [];
+
+        // 1️⃣ Línea principal con atributos + clases relacionadas
+        const allChildren = [...attrNames, ...rels].join(", ");
+        xml += `<!ELEMENT ${className} (${allChildren})>\n`;
+
+        // 2️⃣ Definir cada atributo
+        attrs.forEach((rawAttr) => {
+            const attrName = rawAttr.split(":")[0].trim();
+            xml += `<!ELEMENT ${attrName} (#CDATA)>\n`;
         });
-        const url = URL.createObjectURL(blob);
+    });
 
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'uml-diagram.json';
-        a.click();
+    // --- Descargar el archivo ---
+    const blob = new Blob([xml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "uml-dtd.xml";
+    a.click();
+    URL.revokeObjectURL(url);
+};
 
-        URL.revokeObjectURL(url);
-    };
+
+
+
 
     return (
         <div
